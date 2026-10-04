@@ -416,6 +416,50 @@ function decodeSmartLithium(data) {
 }
 
 /**
+ * Decode the AC Charger record (type 0x08).
+ *
+ * Decrypted offsets are 32 bits lower than the published record offsets.
+ *
+ *  0  device state       8 bits,                    NA 0xFF
+ *  8  charger error      8 bits,                    NA 0xFF
+ * 16  output 1 voltage  13 bits, 0.01 V,            NA 0x1FFF
+ * 29  output 1 current  11 bits, 0.1 A,             NA 0x7FF
+ * 40  output 2 voltage  13 bits, 0.01 V,            NA 0x1FFF
+ * 53  output 2 current  11 bits, 0.1 A,             NA 0x7FF
+ * 64  output 3 voltage  13 bits, 0.01 V,            NA 0x1FFF
+ * 77  output 3 current  11 bits, 0.1 A,             NA 0x7FF
+ * 88  temperature        7 bits, C with -40 offset, NA 0x7F
+ * 95  AC input current   9 bits, 0.1 A,             NA 0x1FF
+ */
+function decodeAcCharger(data) {
+  const state = readBits(data, 0, 8)
+  const error = readBits(data, 8, 8)
+  const voltage1 = readBits(data, 16, 13)
+  const current1 = readBits(data, 29, 11)
+  const voltage2 = readBits(data, 40, 13)
+  const current2 = readBits(data, 53, 11)
+  const voltage3 = readBits(data, 64, 13)
+  const current3 = readBits(data, 77, 11)
+  const temperature = readBits(data, 88, 7)
+  const acCurrent = readBits(data, 95, 9)
+
+  return {
+    state: valueUnless(state, 0xff),
+    state_name: deviceState(state),
+    error: valueUnless(error, 0xff),
+    error_name: chargerErrorName(error),
+    output_voltage_1_v: valueUnless(voltage1, 0x1fff, value => value * 0.01),
+    output_current_1_a: valueUnless(current1, 0x7ff, value => value * 0.1),
+    output_voltage_2_v: valueUnless(voltage2, 0x1fff, value => value * 0.01),
+    output_current_2_a: valueUnless(current2, 0x7ff, value => value * 0.1),
+    output_voltage_3_v: valueUnless(voltage3, 0x1fff, value => value * 0.01),
+    output_current_3_a: valueUnless(current3, 0x7ff, value => value * 0.1),
+    temperature_c: valueUnless(temperature, 0x7f, value => value - 40),
+    ac_current_a: valueUnless(acCurrent, 0x1ff, value => value * 0.1)
+  }
+}
+
+/**
  * Decode the Smart Battery Protect record (type 0x09).
  *
  * The specification table numbers this record's fields from start bit 8 while
@@ -596,6 +640,7 @@ const RECORD_DECODERS = {
   0x04: decodeDcDcConverter,
   0x05: decodeSmartLithium,
   0x06: decodeInverterRs,
+  0x08: decodeAcCharger,
   0x09: decodeBatteryProtect,
   0x0a: decodeLynxSmartBms,
   0x0b: decodeMultiRs,
@@ -618,6 +663,7 @@ module.exports = {
   decodeOrionOffReasons,
   decodeOrionXs,
   decodeSmartLithium,
+  decodeAcCharger,
   decodeSolarCharger,
   decodeVeBus,
   normalizeKey,

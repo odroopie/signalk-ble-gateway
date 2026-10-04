@@ -112,6 +112,7 @@ const PATH_BUILDERS = {
   0x04: dcDcConverterCandidates,
   0x05: smartLithiumCandidates,
   0x06: inverterRsCandidates,
+  0x08: acChargerCandidates,
   0x0a: lynxCandidates,
   0x0f: orionCandidates
 }
@@ -157,6 +158,23 @@ function dcDcConverterCandidates(id, values) {
   return [
     [`${base}.voltage`, values.output_voltage_v],
     [`${base}.inputVoltage`, values.input_voltage_v],
+    [`${base}.chargingMode`, chargingMode(values.state_name)],
+    [`${base}.chargerState`, values.state_name],
+    [`${base}.chargerError`, values.error_name]
+  ]
+}
+
+// AC charger record 0x08 can describe up to three DC outputs.
+// Publish output 1 as this configured charger. Outputs 2 and 3 remain
+// available in the decoded diagnostic data.
+function acChargerCandidates(id, values) {
+  const base = `electrical.chargers.${id}`
+  return [
+    [`${base}.voltage`, values.output_voltage_1_v],
+    [`${base}.current`, values.output_current_1_a],
+    [`${base}.temperature`, values.temperature_c == null
+      ? null : values.temperature_c + 273.15],
+    [`${base}.inputCurrent`, values.ac_current_a],
     [`${base}.chargingMode`, chargingMode(values.state_name)],
     [`${base}.chargerState`, values.state_name],
     [`${base}.chargerError`, values.error_name]
